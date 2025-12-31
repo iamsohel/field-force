@@ -1,15 +1,15 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Phone, Smartphone } from 'lucide-react';
-import { useAuthStore } from '@store/authStore';
+import { useAuthStore } from "@store/authStore";
+import { Lock, Mail, Phone, Smartphone } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function LoginPage() {
-  const [loginMode, setLoginMode] = useState('email'); // 'email' or 'otp'
+  const [loginMode, setLoginMode] = useState("email"); // 'email' or 'otp'
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    phone: '',
-    otp: '',
+    email: "",
+    password: "",
+    phone: "",
+    otp: "",
   });
   const [showOTPInput, setShowOTPInput] = useState(false);
 
@@ -20,7 +20,7 @@ function LoginPage() {
     e.preventDefault();
     const success = await login(formData.email, formData.password);
     if (success) {
-      navigate('/');
+      navigate("/");
     }
   };
 
@@ -34,29 +34,29 @@ function LoginPage() {
     e.preventDefault();
     const success = await loginWithOTP(formData.phone, formData.otp);
     if (success) {
-      navigate('/');
+      navigate("/");
     }
   };
 
   const handleQuickLogin = async (role) => {
-    let email = '';
-    let password = 'demo123';
+    let email = "";
+    let password = "demo123";
 
     switch (role) {
-      case 'salesperson':
-        email = 'albert.ramirez@company.com';
+      case "salesperson":
+        email = "albert.ramirez@company.com";
         break;
-      case 'manager':
-        email = 'rahul.kumar@company.com';
+      case "manager":
+        email = "rahul.kumar@company.com";
         break;
-      case 'admin':
-        email = 'admin@company.com';
+      case "admin":
+        email = "admin@company.com";
         break;
     }
 
     const success = await login(email, password);
     if (success) {
-      navigate('/');
+      navigate("/");
     }
   };
 
@@ -68,7 +68,9 @@ function LoginPage() {
           <div className="inline-block p-4 bg-white rounded-full mb-4">
             <Smartphone className="w-12 h-12 text-primary-600" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Field Force Tracking</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Field Force Tracking
+          </h1>
           <p className="text-primary-100">Sign in to your account</p>
         </div>
 
@@ -77,22 +79,22 @@ function LoginPage() {
           {/* Tab Switch */}
           <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg">
             <button
-              onClick={() => setLoginMode('email')}
+              onClick={() => setLoginMode("email")}
               className={`flex-1 py-2 rounded-md font-medium transition-colors ${
-                loginMode === 'email'
-                  ? 'bg-white text-primary-600 shadow'
-                  : 'text-gray-600 hover:text-gray-900'
+                loginMode === "email"
+                  ? "bg-white text-primary-600 shadow"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               <Mail className="w-4 h-4 inline mr-2" />
               Email
             </button>
             <button
-              onClick={() => setLoginMode('otp')}
+              onClick={() => setLoginMode("otp")}
               className={`flex-1 py-2 rounded-md font-medium transition-colors ${
-                loginMode === 'otp'
-                  ? 'bg-white text-primary-600 shadow'
-                  : 'text-gray-600 hover:text-gray-900'
+                loginMode === "otp"
+                  ? "bg-white text-primary-600 shadow"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               <Phone className="w-4 h-4 inline mr-2" />
@@ -108,7 +110,7 @@ function LoginPage() {
           )}
 
           {/* Email Login Form */}
-          {loginMode === 'email' && (
+          {loginMode === "email" && (
             <form onSubmit={handleEmailLogin} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -153,14 +155,17 @@ function LoginPage() {
                 disabled={isLoading}
                 className="w-full btn btn-primary py-3"
               >
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? "Signing in..." : "Sign In"}
               </button>
             </form>
           )}
 
           {/* OTP Login Form */}
-          {loginMode === 'otp' && (
-            <form onSubmit={showOTPInput ? handleOTPLogin : handleSendOTP} className="space-y-4">
+          {loginMode === "otp" && (
+            <form
+              onSubmit={showOTPInput ? handleOTPLogin : handleSendOTP}
+              className="space-y-4"
+            >
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Phone Number
@@ -197,9 +202,7 @@ function LoginPage() {
                     maxLength="6"
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Demo OTP: 123456
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Demo OTP: 123456</p>
                 </div>
               )}
 
@@ -209,10 +212,10 @@ function LoginPage() {
                 className="w-full btn btn-primary py-3"
               >
                 {isLoading
-                  ? 'Processing...'
+                  ? "Processing..."
                   : showOTPInput
-                  ? 'Verify OTP'
-                  : 'Send OTP'}
+                  ? "Verify OTP"
+                  : "Send OTP"}
               </button>
 
               {showOTPInput && (
@@ -229,24 +232,26 @@ function LoginPage() {
 
           {/* Quick Login (Demo) */}
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-600 mb-3 text-center">Quick Demo Login:</p>
+            <p className="text-sm text-gray-600 mb-3 text-center">
+              Quick Demo Login:
+            </p>
             <div className="grid grid-cols-3 gap-2">
               <button
-                onClick={() => handleQuickLogin('salesperson')}
+                onClick={() => handleQuickLogin("salesperson")}
                 className="btn btn-secondary text-xs py-2"
                 disabled={isLoading}
               >
                 Salesperson
               </button>
-              <button
+              {/* <button
                 onClick={() => handleQuickLogin('manager')}
                 className="btn btn-secondary text-xs py-2"
                 disabled={isLoading}
               >
                 Manager
-              </button>
+              </button> */}
               <button
-                onClick={() => handleQuickLogin('admin')}
+                onClick={() => handleQuickLogin("admin")}
                 className="btn btn-secondary text-xs py-2"
                 disabled={isLoading}
               >

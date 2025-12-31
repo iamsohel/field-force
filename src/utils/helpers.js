@@ -3,26 +3,50 @@ import { format, formatDistanceToNow, parseISO } from 'date-fns';
 // Date formatting utilities
 export const formatDate = (date, formatStr = 'MMM dd, yyyy') => {
   if (!date) return '';
-  const dateObj = typeof date === 'string' ? parseISO(date) : date;
-  return format(dateObj, formatStr);
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    if (isNaN(dateObj.getTime())) return 'Invalid Date';
+    return format(dateObj, formatStr);
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'Invalid Date';
+  }
 };
 
 export const formatTime = (date) => {
   if (!date) return '';
-  const dateObj = typeof date === 'string' ? parseISO(date) : date;
-  return format(dateObj, 'hh:mm a');
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    if (isNaN(dateObj.getTime())) return '';
+    return format(dateObj, 'hh:mm a');
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return '';
+  }
 };
 
 export const formatDateTime = (date) => {
   if (!date) return '';
-  const dateObj = typeof date === 'string' ? parseISO(date) : date;
-  return format(dateObj, 'MMM dd, yyyy hh:mm a');
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    if (isNaN(dateObj.getTime())) return 'Invalid Date';
+    return format(dateObj, 'MMM dd, yyyy hh:mm a');
+  } catch (error) {
+    console.error('Error formatting datetime:', error);
+    return 'Invalid Date';
+  }
 };
 
 export const formatRelativeTime = (date) => {
   if (!date) return '';
-  const dateObj = typeof date === 'string' ? parseISO(date) : date;
-  return formatDistanceToNow(dateObj, { addSuffix: true });
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    if (isNaN(dateObj.getTime())) return '';
+    return formatDistanceToNow(dateObj, { addSuffix: true });
+  } catch (error) {
+    console.error('Error formatting relative time:', error);
+    return '';
+  }
 };
 
 // Permission utilities
