@@ -60,6 +60,13 @@ export const usersApi = {
 
   getTeamMembers: async (managerId) => {
     await delay();
+    const user = mockData.users.find(u => u.id === managerId);
+    // For admin, return all salespeople and managers
+    if (user?.role === 'admin') {
+      const teamMembers = mockData.users.filter(u => u.role === 'salesperson' || u.role === 'manager');
+      return { success: true, data: teamMembers };
+    }
+    // For managers, return their direct reports
     const teamMembers = mockData.users.filter(u => u.manager === managerId);
     return { success: true, data: teamMembers };
   },
@@ -67,6 +74,22 @@ export const usersApi = {
   update: async (id, data) => {
     await delay();
     return { success: true, data: { ...mockData.users.find(u => u.id === id), ...data } };
+  },
+
+  create: async (userData) => {
+    await delay();
+    const newUser = {
+      id: (parseInt(mockData.users[mockData.users.length - 1]?.id || '0') + 1).toString(),
+      avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`,
+      status: 'active',
+      ...userData,
+    };
+    return { success: true, data: newUser };
+  },
+
+  delete: async (id) => {
+    await delay();
+    return { success: true, data: { id } };
   },
 };
 

@@ -12,6 +12,7 @@ import MainLayout from '@components/layout/MainLayout';
 import Dashboard from '@modules/dashboard/Dashboard';
 import AdminDashboard from '@modules/dashboard/AdminDashboard';
 import TeamDashboard from '@modules/dashboard/TeamDashboard';
+import TeamManagement from '@modules/team/TeamManagement';
 import TeamMemberProfile from '@modules/team/TeamMemberProfile';
 import Attendance from '@modules/attendance/Attendance';
 import Tasks from '@modules/tasks/Tasks';
@@ -39,7 +40,7 @@ function App() {
         element={isAuthenticated ? <MainLayout /> : <Navigate to="/login" replace />}
       >
         <Route index element={user?.role === 'admin' ? <AdminDashboard /> : <Dashboard />} />
-        <Route path="team" element={<TeamDashboard />} />
+        <Route path="team" element={user?.role === 'admin' || user?.role === 'manager' ? <TeamManagement /> : <TeamDashboard />} />
         <Route path="team/:memberId" element={<TeamMemberProfile />} />
         <Route path="attendance" element={<Attendance />} />
         <Route path="tasks" element={<Tasks />} />
