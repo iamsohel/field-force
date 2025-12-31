@@ -12,8 +12,7 @@ import {
   Settings,
   LogOut,
   X,
-  ChevronLeft,
-  ChevronRight,
+  Menu,
 } from 'lucide-react';
 import { useAuthStore } from '@store/authStore';
 import { useUIStore } from '@store/uiStore';
@@ -129,11 +128,7 @@ function Sidebar() {
             className="hidden lg:block p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
             title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {sidebarCollapsed ? (
-              <ChevronRight className="w-5 h-5" />
-            ) : (
-              <ChevronLeft className="w-5 h-5" />
-            )}
+            <Menu className="w-5 h-5" />
           </button>
         </div>
 
