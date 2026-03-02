@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, CheckCircle, Clock, AlertCircle, Filter, List, LayoutGrid, Users, Trash2, Calendar } from 'lucide-react';
+import { Plus, CheckCircle, Clock, AlertCircle, Filter, List, LayoutGrid, Users, Trash2, Calendar, Search } from 'lucide-react';
 import { useAuthStore } from '@store/authStore';
 import { useTasksStore } from '@store/tasksStore';
 import { formatDate, formatTime } from '@utils/helpers';
@@ -19,15 +19,16 @@ function Tasks() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
-  const [viewType, setViewType] = useState('kanban'); // 'list' or 'kanban'
+  const [viewType, setViewType] = useState('list'); // 'list' or 'kanban'
   const [statusFilter, setStatusFilter] = useState('all'); // all, todo, in-progress, completed, on-hold, cancelled
   const [dateFilter, setDateFilter] = useState('all'); // all, today, week, month, custom
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [employeeFilter, setEmployeeFilter] = useState(''); // For admin only
+  const [searchQuery, setSearchQuery] = useState(''); // Search by task name or description
   const [allUsers, setAllUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(6); // For list view pagination
+  const [itemsPerPage] = useState(10); // For list view pagination
   const [draggedTask, setDraggedTask] = useState(null);
   const isAdmin = user?.role === 'admin';
 
@@ -96,6 +97,11 @@ function Tasks() {
       setCurrentPage(1); // Reset to first page when filters change
     }
   }, [user, statusFilter, dateFilter, startDate, endDate, employeeFilter, isAdmin]);
+
+  // Reset to first page when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const handleDragStart = (e, task) => {
     setDraggedTask(task);
@@ -300,12 +306,20 @@ function Tasks() {
     return foundUser ? foundUser.name : `User ${userId}`;
   };
 
+  // Filter tasks by search query (name or description)
+  const filteredTasksBySearch = searchQuery
+    ? tasks.filter(task => 
+        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        task.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : tasks;
+
   // Filtered tasks for stats and kanban (only todo, in-progress, completed)
-  const todoTasks = tasks.filter(t => t.status === 'todo');
-  const inProgressTasks = tasks.filter(t => t.status === 'in-progress');
-  const completedTasks = tasks.filter(t => t.status === 'completed');
-  const onHoldTasks = tasks.filter(t => t.status === 'on-hold');
-  const cancelledTasks = tasks.filter(t => t.status === 'cancelled');
+  const todoTasks = filteredTasksBySearch.filter(t => t.status === 'todo');
+  const inProgressTasks = filteredTasksBySearch.filter(t => t.status === 'in-progress');
+  const completedTasks = filteredTasksBySearch.filter(t => t.status === 'completed');
+  const onHoldTasks = filteredTasksBySearch.filter(t => t.status === 'on-hold');
+  const cancelledTasks = filteredTasksBySearch.filter(t => t.status === 'cancelled');
 
   // For list view, paginate all tasks together
   const getPaginatedTasks = (taskList, page) => {
@@ -316,11 +330,11 @@ function Tasks() {
     return { currentTasks, totalPages, indexOfFirstItem, indexOfLastItem };
   };
 
-  const listPagination = getPaginatedTasks(tasks, currentPage);
+  const listPagination = getPaginatedTasks(filteredTasksBySearch, currentPage);
 
   return (
-    <div className="space-y-4 lg:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Tasks</h1>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <button
@@ -334,7 +348,7 @@ function Tasks() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatCard
           icon={AlertCircle}
           title="Todo"
@@ -356,14 +370,29 @@ function Tasks() {
       </div>
 
       {/* Filters */}
-      <Card>
-        <div className="space-y-4">
+      <Card className="p-3">
+        <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-gray-500" />
             <h3 className="font-semibold text-gray-900">Filters</h3>
           </div>
+          
+          {/* Search */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <Search className="w-4 h-4 inline mr-1" />
+              Search
+            </label>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="input"
+              placeholder="Search by task name or description..."
+            />
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Employee Filter (Admin only) */}
             {isAdmin && (
               <div>
@@ -451,7 +480,7 @@ function Tasks() {
 
           {/* Custom Date Range */}
           {dateFilter === 'custom' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                 <input
@@ -798,7 +827,7 @@ function Tasks() {
               currentPage={currentPage}
               totalPages={listPagination.totalPages}
               onPageChange={setCurrentPage}
-              totalItems={tasks.length}
+              totalItems={filteredTasksBySearch.length}
               itemsPerPage={itemsPerPage}
               indexOfFirstItem={listPagination.indexOfFirstItem}
               indexOfLastItem={listPagination.indexOfLastItem}
