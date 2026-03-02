@@ -450,3 +450,148 @@ export const routesApi = {
     return { success: true, data: newRoute };
   },
 };
+
+// Leave Management API
+export const leaveApi = {
+  // Public Holidays
+  getPublicHolidays: async () => {
+    await delay();
+    return { success: true, data: mockData.publicHolidays };
+  },
+
+  createPublicHoliday: async (holidayData) => {
+    await delay();
+    const newHoliday = {
+      id: 'ph' + Date.now(),
+      ...holidayData,
+    };
+    return { success: true, data: newHoliday };
+  },
+
+  updatePublicHoliday: async (id, holidayData) => {
+    await delay();
+    return {
+      success: true,
+      data: { ...mockData.publicHolidays.find(h => h.id === id), ...holidayData },
+    };
+  },
+
+  deletePublicHoliday: async (id) => {
+    await delay();
+    return { success: true, data: { id } };
+  },
+
+  // Leave Applications
+  getLeaveApplications: async (userId) => {
+    await delay();
+    const user = mockData.users.find(u => u.id === userId);
+    // For admin, return all leave applications
+    if (user?.role === 'admin') {
+      return { success: true, data: mockData.leaveApplications };
+    }
+    // For employees, return only their applications
+    const userLeaves = mockData.leaveApplications.filter(l => l.userId === userId);
+    return { success: true, data: userLeaves };
+  },
+
+  createLeaveApplication: async (leaveData) => {
+    await delay();
+    const newLeave = {
+      id: 'la' + Date.now(),
+      status: 'pending',
+      appliedAt: new Date().toISOString(),
+      ...leaveData,
+    };
+    return { success: true, data: newLeave };
+  },
+
+  updateLeaveStatus: async (id, status, approvedBy) => {
+    await delay();
+    const updateData = {
+      status,
+      ...(status === 'approved' && {
+        approvedAt: new Date().toISOString(),
+        approvedBy,
+      }),
+      ...(status === 'cancelled' && {
+        cancelledAt: new Date().toISOString(),
+      }),
+    };
+    return {
+      success: true,
+      data: { ...mockData.leaveApplications.find(l => l.id === id), ...updateData },
+    };
+  },
+
+  cancelLeaveApplication: async (id) => {
+    await delay();
+    return {
+      success: true,
+      data: {
+        ...mockData.leaveApplications.find(l => l.id === id),
+        status: 'cancelled',
+        cancelledAt: new Date().toISOString(),
+      },
+    };
+  },
+
+  // Leave Configuration
+  getLeaveConfigurations: async () => {
+    await delay();
+    return { success: true, data: mockData.leaveConfigurations };
+  },
+
+  createLeaveConfiguration: async (configData) => {
+    await delay();
+    const newConfig = {
+      id: 'lc' + Date.now(),
+      ...configData,
+    };
+    return { success: true, data: newConfig };
+  },
+
+  updateLeaveConfiguration: async (id, configData) => {
+    await delay();
+    return {
+      success: true,
+      data: { ...mockData.leaveConfigurations.find(lc => lc.id === id), ...configData },
+    };
+  },
+
+  // Leave Balance
+  getLeaveBalance: async (userId, year) => {
+    await delay();
+    const user = mockData.users.find(u => u.id === userId);
+    const designation = user?.role || 'salesperson';
+    const config = mockData.leaveConfigurations.find(
+      lc => lc.designation === designation && lc.year === year
+    );
+
+    // Calculate used leaves
+    const userLeaves = mockData.leaveApplications.filter(
+      l => l.userId === userId && l.status === 'approved'
+    );
+    const casualUsed = userLeaves
+      .filter(l => l.leaveType === 'casual')
+      .reduce((sum, l) => sum + l.days, 0);
+    const sickUsed = userLeaves
+      .filter(l => l.leaveType === 'sick')
+      .reduce((sum, l) => sum + l.days, 0);
+
+    return {
+      success: true,
+      data: {
+        casualLeave: {
+          total: config?.casualLeavePerYear || 12,
+          used: casualUsed,
+          remaining: (config?.casualLeavePerYear || 12) - casualUsed,
+        },
+        sickLeave: {
+          total: config?.sickLeavePerYear || 10,
+          used: sickUsed,
+          remaining: (config?.sickLeavePerYear || 10) - sickUsed,
+        },
+      },
+    };
+  },
+};

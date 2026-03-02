@@ -21,6 +21,7 @@ import Sales from '@modules/sales/Sales';
 import Reports from '@modules/reports/Reports';
 import Expenses from '@modules/expenses/Expenses';
 import Territory from '@modules/territory/Territory';
+import Leave from '@modules/leave/Leave';
 import Settings from '@modules/settings/Settings';
 
 function App() {
@@ -49,6 +50,7 @@ function App() {
         <Route path="reports" element={<Reports />} />
         <Route path="expenses" element={<Expenses />} />
         <Route path="territory" element={<Territory />} />
+        <Route path="leave" element={<Leave />} />
         <Route path="settings" element={<Settings />} />
       </Route>
 

@@ -9,6 +9,7 @@ import {
   BarChart3,
   Wallet,
   Map,
+  Calendar,
   Settings,
   LogOut,
   X,
@@ -75,6 +76,12 @@ function Sidebar() {
       icon: Map,
       path: '/territory',
       roles: ['manager', 'admin'],
+    },
+    {
+      name: 'Leave',
+      icon: Calendar,
+      path: '/leave',
+      roles: ['salesperson', 'manager', 'admin'],
     },
   ];
 
