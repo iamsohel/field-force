@@ -4,6 +4,7 @@ import { attendanceApi } from '@services/api';
 export const useAttendanceStore = create((set, get) => ({
   todayAttendance: null,
   attendanceHistory: [],
+  allAttendanceHistory: [], // For admin view
   isLoading: false,
   error: null,
 
@@ -58,6 +59,18 @@ export const useAttendanceStore = create((set, get) => ({
       const response = await attendanceApi.getByUserId(userId, startDate, endDate);
       if (response.success) {
         set({ attendanceHistory: response.data, isLoading: false });
+      }
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
+    }
+  },
+
+  fetchAllAttendanceHistory: async (startDate, endDate, userId = null) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await attendanceApi.getAll(startDate, endDate, userId);
+      if (response.success) {
+        set({ allAttendanceHistory: response.data, isLoading: false });
       }
     } catch (error) {
       set({ error: error.message, isLoading: false });

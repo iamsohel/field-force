@@ -21,10 +21,10 @@ function Modal({ isOpen, onClose, title, children, size = 'md', footer }) {
       />
 
       {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="flex min-h-full items-center justify-center p-4 py-8 sm:py-12">
         <div
           className={cn(
-            'relative bg-white rounded-lg shadow-xl w-full',
+            'relative bg-white rounded-lg shadow-xl w-full my-8',
             sizeClasses[size]
           )}
           onClick={(e) => e.stopPropagation()}

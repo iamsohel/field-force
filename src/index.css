@@ -71,3 +71,52 @@
   width: 100%;
   border-radius: 8px;
 }
+
+/* Ensure Leaflet maps don't appear above sidebar on mobile */
+@media (max-width: 1023px) {
+  .leaflet-container,
+  .leaflet-container * {
+    z-index: 0 !important;
+  }
+  
+  .leaflet-pane,
+  .leaflet-map-pane,
+  .leaflet-tile-pane,
+  .leaflet-overlay-pane,
+  .leaflet-shadow-pane,
+  .leaflet-marker-pane,
+  .leaflet-tooltip-pane,
+  .leaflet-popup-pane {
+    z-index: 0 !important;
+  }
+  
+  .leaflet-control-container,
+  .leaflet-control-container * {
+    z-index: 1 !important;
+  }
+  
+  .leaflet-top,
+  .leaflet-bottom,
+  .leaflet-left,
+  .leaflet-right {
+    z-index: 1 !important;
+  }
+  
+  .leaflet-popup,
+  .leaflet-popup-content-wrapper,
+  .leaflet-popup-tip {
+    z-index: 40 !important;
+  }
+  
+  .leaflet-control-zoom,
+  .leaflet-control-attribution,
+  .leaflet-control-layers {
+    z-index: 1 !important;
+  }
+  
+  /* Ensure main content stays below sidebar */
+  main {
+    z-index: 0 !important;
+    position: relative;
+  }
+}

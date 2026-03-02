@@ -122,7 +122,44 @@ export const attendanceApi = {
 
   getByUserId: async (userId, startDate, endDate) => {
     await delay();
-    const records = mockData.attendanceRecords.filter(r => r.userId === userId);
+    let records = mockData.attendanceRecords.filter(r => r.userId === userId);
+    
+    // Filter by date range if provided
+    if (startDate && endDate) {
+      const start = new Date(startDate).toISOString().split('T')[0];
+      const end = new Date(endDate).toISOString().split('T')[0];
+      records = records.filter(r => r.date >= start && r.date <= end);
+    }
+    
+    // Sort by date descending
+    records.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    return { success: true, data: records };
+  },
+
+  getAll: async (startDate, endDate, userId = null) => {
+    await delay();
+    let records = [...mockData.attendanceRecords];
+    
+    // Filter by user if provided
+    if (userId) {
+      records = records.filter(r => r.userId === userId);
+    }
+    
+    // Filter by date range if provided
+    if (startDate && endDate) {
+      const start = new Date(startDate).toISOString().split('T')[0];
+      const end = new Date(endDate).toISOString().split('T')[0];
+      records = records.filter(r => r.date >= start && r.date <= end);
+    }
+    
+    // Sort by date descending, then by userId
+    records.sort((a, b) => {
+      const dateCompare = new Date(b.date) - new Date(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      return a.userId.localeCompare(b.userId);
+    });
+    
     return { success: true, data: records };
   },
 
@@ -138,15 +175,43 @@ export const attendanceApi = {
 
 // Tasks API
 export const tasksApi = {
-  getByUserId: async (userId) => {
+  getByUserId: async (userId, filters = {}) => {
     await delay();
     const user = mockData.users.find(u => u.id === userId);
-    // For admin, return all tasks
+    let tasks = [];
+    
+    // For admin, return all tasks or filter by employee
     if (user?.role === 'admin') {
-      return { success: true, data: mockData.tasks };
+      tasks = [...mockData.tasks];
+      if (filters.employeeId) {
+        tasks = tasks.filter(t => t.userId === filters.employeeId);
+      }
+    } else {
+      tasks = mockData.tasks.filter(t => t.userId === userId);
     }
-    const userTasks = mockData.tasks.filter(t => t.userId === userId);
-    return { success: true, data: userTasks };
+    
+    // Filter by status
+    if (filters.status && filters.status !== 'all') {
+      tasks = tasks.filter(t => t.status === filters.status);
+    }
+    
+    // Filter by date range
+    if (filters.startDate && filters.endDate) {
+      const start = new Date(filters.startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(filters.endDate);
+      end.setHours(23, 59, 59, 999);
+      
+      tasks = tasks.filter(t => {
+        const dueDate = new Date(t.dueDate);
+        return dueDate >= start && dueDate <= end;
+      });
+    }
+    
+    // Sort by due date
+    tasks.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+    
+    return { success: true, data: tasks };
   },
 
   getById: async (id) => {
@@ -166,12 +231,57 @@ export const tasksApi = {
 
   update: async (id, data) => {
     await delay();
-    return { success: true, data: { ...mockData.tasks.find(t => t.id === id), ...data } };
+    const task = mockData.tasks.find(t => t.id === id);
+    if (!task) return { success: false, error: 'Task not found' };
+    
+    const updatedTask = { ...task, ...data };
+    
+    // Handle status change
+    if (data.status && data.status !== task.status) {
+      if (data.status === 'completed' && !updatedTask.completedAt) {
+        updatedTask.completedAt = new Date().toISOString();
+      }
+      if (data.status !== 'completed') {
+        updatedTask.completedAt = null;
+      }
+    }
+    
+    const index = mockData.tasks.findIndex(t => t.id === id);
+    if (index !== -1) {
+      mockData.tasks[index] = updatedTask;
+    }
+    
+    return { success: true, data: updatedTask };
   },
 
   updateStatus: async (id, status) => {
     await delay();
-    return { success: true, data: { ...mockData.tasks.find(t => t.id === id), status } };
+    const task = mockData.tasks.find(t => t.id === id);
+    if (!task) return { success: false, error: 'Task not found' };
+    
+    const updatedTask = { ...task, status };
+    if (status === 'completed' && !task.completedAt) {
+      updatedTask.completedAt = new Date().toISOString();
+    }
+    if (status !== 'completed') {
+      updatedTask.completedAt = null;
+    }
+    
+    const index = mockData.tasks.findIndex(t => t.id === id);
+    if (index !== -1) {
+      mockData.tasks[index] = updatedTask;
+    }
+    
+    return { success: true, data: updatedTask };
+  },
+
+  delete: async (id) => {
+    await delay();
+    const index = mockData.tasks.findIndex(t => t.id === id);
+    if (index !== -1) {
+      mockData.tasks.splice(index, 1);
+    }
+    return { success: true, data: { id } };
   },
 };
 

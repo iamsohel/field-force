@@ -117,7 +117,7 @@ function CompanyDetails() {
         {/* Map */}
         <div className="lg:col-span-1">
           <Card title="Location Map" className="h-[400px]">
-            <div className="h-full">
+            <div className="h-full" style={{ isolation: 'isolate' }}>
               <Map
                 center={[company.lat || 23.8103, company.lng || 90.4125]}
                 zoom={15}

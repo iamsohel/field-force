@@ -1,29 +1,74 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Calendar, MapPin, AlertCircle } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import Modal from '@components/common/Modal';
 import { useAuthStore } from '@store/authStore';
 import { useTasksStore } from '@store/tasksStore';
 import { usersApi } from '@services/api';
 
-function CreateTaskModal({ isOpen, onClose, assignToUserId = null }) {
+// Fix for default marker icon
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Component to handle map clicks
+function MapClickHandler({ onMapClick }) {
+  useMapEvents({
+    click: (e) => {
+      const { lat, lng } = e.latlng;
+      onMapClick(lat, lng);
+    },
+  });
+  return null;
+}
+
+function EditTaskModal({ isOpen, onClose, task, onStatusChange }) {
   const { user } = useAuthStore();
-  const { createTask } = useTasksStore();
+  const { updateTask } = useTasksStore();
   const [teamMembers, setTeamMembers] = useState([]);
+  const [showMap, setShowMap] = useState(false);
+
+  const DEFAULT_LAT = 23.8103; // Dhaka
+  const DEFAULT_LNG = 90.4125; // Dhaka
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     type: 'visit',
     priority: 'medium',
+    status: 'todo',
     dueDate: '',
     dueTime: '',
-    assignedTo: assignToUserId || user?.id,
+    assignedTo: user?.id,
     location: {
       address: '',
-      lat: '',
-      lng: '',
+      lat: DEFAULT_LAT,
+      lng: DEFAULT_LNG,
     },
   });
+
+  useEffect(() => {
+    if (task) {
+      const dueDate = new Date(task.dueDate);
+      setFormData({
+        title: task.title || '',
+        description: task.description || '',
+        type: task.type || 'visit',
+        priority: task.priority || 'medium',
+        status: task.status || 'todo',
+        dueDate: dueDate.toISOString().split('T')[0],
+        dueTime: dueDate.toTimeString().slice(0, 5),
+        assignedTo: task.userId || user?.id,
+        location: task.location || { address: '', lat: DEFAULT_LAT, lng: DEFAULT_LNG },
+      });
+      setShowMap(false);
+    }
+  }, [task, user]);
 
   useEffect(() => {
     if (user?.role === 'admin' && isOpen) {
@@ -45,7 +90,6 @@ function CreateTaskModal({ isOpen, onClose, assignToUserId = null }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -56,6 +100,17 @@ function CreateTaskModal({ isOpen, onClose, assignToUserId = null }) {
     setFormData(prev => ({
       ...prev,
       location: { ...prev.location, [name]: value }
+    }));
+  };
+
+  const handleMapClick = (lat, lng) => {
+    setFormData(prev => ({
+      ...prev,
+      location: {
+        ...prev.location,
+        lat: lat,
+        lng: lng,
+      }
     }));
   };
 
@@ -83,39 +138,34 @@ function CreateTaskModal({ isOpen, onClose, assignToUserId = null }) {
       description: formData.description,
       type: formData.type,
       priority: formData.priority,
-      status: 'todo',
+      status: formData.status,
       dueDate: `${formData.dueDate}T${formData.dueTime}:00`,
-      location: formData.location.address ? {
-        address: formData.location.address,
-        lat: parseFloat(formData.location.lat) || 28.6139,
-        lng: parseFloat(formData.location.lng) || 77.2090,
+      location: formData.location.address || formData.location.lat ? {
+        address: formData.location.address || `Location (${formData.location.lat.toFixed(4)}, ${formData.location.lng.toFixed(4)})`,
+        lat: parseFloat(formData.location.lat) || DEFAULT_LAT,
+        lng: parseFloat(formData.location.lng) || DEFAULT_LNG,
       } : null,
     };
 
-    const success = await createTask(taskData);
+    const success = await updateTask(task.id, taskData);
 
     setIsSubmitting(false);
 
     if (success) {
-      // Reset form
-      setFormData({
-        title: '',
-        description: '',
-        type: 'visit',
-        priority: 'medium',
-        dueDate: '',
-        dueTime: '',
-        location: { address: '', lat: '', lng: '' },
-      });
+      if (onStatusChange) {
+        onStatusChange();
+      }
       onClose();
     }
   };
+
+  if (!task) return null;
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Create New Task"
+      title="Edit Task"
       size="lg"
       footer={
         <>
@@ -133,7 +183,7 @@ function CreateTaskModal({ isOpen, onClose, assignToUserId = null }) {
             className="btn btn-primary"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Creating...' : 'Create Task'}
+            {isSubmitting ? 'Updating...' : 'Update Task'}
           </button>
         </>
       }
@@ -202,8 +252,8 @@ function CreateTaskModal({ isOpen, onClose, assignToUserId = null }) {
           )}
         </div>
 
-        {/* Type and Priority */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Type, Priority, and Status */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Task Type
@@ -234,6 +284,24 @@ function CreateTaskModal({ isOpen, onClose, assignToUserId = null }) {
               <option value="low">Low</option>
               <option value="medium">Medium</option>
               <option value="high">High</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Status *
+            </label>
+            <select
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              className="input"
+            >
+              <option value="todo">Todo</option>
+              <option value="in-progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="on-hold">On Hold</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </div>
         </div>
@@ -276,42 +344,78 @@ function CreateTaskModal({ isOpen, onClose, assignToUserId = null }) {
           </div>
         </div>
 
-        {/* Location (Optional) */}
+        {/* Location */}
         <div className="border-t border-gray-200 pt-4">
-          <div className="flex items-center gap-2 mb-3">
-            <MapPin className="w-5 h-5 text-gray-500" />
-            <label className="text-sm font-medium text-gray-700">
-              Location (Optional)
-            </label>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-gray-500" />
+              <label className="text-sm font-medium text-gray-700">
+                Location (Optional)
+              </label>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowMap(!showMap)}
+              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+            >
+              {showMap ? 'Hide Map' : 'Select from Map'}
+            </button>
           </div>
+
+          {showMap && (
+            <div className="mb-4 h-[300px] rounded-lg overflow-hidden border border-gray-300">
+              <MapContainer
+                center={[formData.location.lat || DEFAULT_LAT, formData.location.lng || DEFAULT_LNG]}
+                zoom={13}
+                style={{ height: '100%', width: '100%' }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {formData.location.lat && formData.location.lng && (
+                  <Marker position={[formData.location.lat, formData.location.lng]} />
+                )}
+                <MapClickHandler onMapClick={handleMapClick} />
+              </MapContainer>
+            </div>
+          )}
 
           <div className="space-y-3">
             <input
               type="text"
               name="address"
-              value={formData.location.address}
+              value={formData.location.address || ''}
               onChange={handleLocationChange}
               className="input"
               placeholder="Enter address"
             />
 
             <div className="grid grid-cols-2 gap-3">
-              <input
-                type="text"
-                name="lat"
-                value={formData.location.lat}
-                onChange={handleLocationChange}
-                className="input"
-                placeholder="Latitude"
-              />
-              <input
-                type="text"
-                name="lng"
-                value={formData.location.lng}
-                onChange={handleLocationChange}
-                className="input"
-                placeholder="Longitude"
-              />
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Latitude</label>
+                <input
+                  type="number"
+                  name="lat"
+                  value={formData.location.lat || ''}
+                  onChange={handleLocationChange}
+                  step="any"
+                  className="input"
+                  placeholder="Latitude"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Longitude</label>
+                <input
+                  type="number"
+                  name="lng"
+                  value={formData.location.lng || ''}
+                  onChange={handleLocationChange}
+                  step="any"
+                  className="input"
+                  placeholder="Longitude"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -320,4 +424,4 @@ function CreateTaskModal({ isOpen, onClose, assignToUserId = null }) {
   );
 }
 
-export default CreateTaskModal;
+export default EditTaskModal;

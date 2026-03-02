@@ -88,7 +88,78 @@ export const users = [
   },
 ];
 
-export const attendanceRecords = [
+// Generate 2 months of attendance data for all users
+const generateAttendanceData = () => {
+  const records = [];
+  const userIds = ['1', '2', '3', '5', '6', '7', '8']; // Exclude admin (id: 4)
+  const today = new Date();
+  const twoMonthsAgo = new Date(today);
+  twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+  
+  userIds.forEach(userId => {
+    const currentDate = new Date(twoMonthsAgo);
+    let recordId = 1000;
+    
+    while (currentDate <= today) {
+      const dayOfWeek = currentDate.getDay();
+      const dateStr = currentDate.toISOString().split('T')[0];
+      
+      // Skip weekends (Saturday = 6, Sunday = 0)
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        // Randomly skip some days (5% chance) for absences
+        const isAbsent = Math.random() < 0.05;
+        
+        if (!isAbsent) {
+          // Generate check-in time between 8:00 AM and 9:30 AM
+          const checkInHour = 8 + Math.floor(Math.random() * 2);
+          const checkInMinute = Math.floor(Math.random() * 60);
+          const checkInTime = new Date(currentDate);
+          checkInTime.setHours(checkInHour, checkInMinute, 0, 0);
+          
+          // Generate check-out time between 5:00 PM and 7:00 PM
+          const checkOutHour = 17 + Math.floor(Math.random() * 2);
+          const checkOutMinute = Math.floor(Math.random() * 60);
+          const checkOutTime = new Date(currentDate);
+          checkOutTime.setHours(checkOutHour, checkOutMinute, 0, 0);
+          
+          const totalHours = (checkOutTime - checkInTime) / (1000 * 60 * 60);
+          
+          records.push({
+            id: `a${userId}_${recordId++}`,
+            userId,
+            date: dateStr,
+            checkIn: checkInTime.toISOString(),
+            checkOut: checkOutTime.toISOString(),
+            checkInLocation: { lat: 23.8103 + (Math.random() - 0.5) * 0.1, lng: 90.4125 + (Math.random() - 0.5) * 0.1, address: `Location ${dateStr}` },
+            checkOutLocation: { lat: 23.8103 + (Math.random() - 0.5) * 0.1, lng: 90.4125 + (Math.random() - 0.5) * 0.1, address: `Location ${dateStr}` },
+            mode: 'field',
+            status: 'present',
+            totalHours: parseFloat(totalHours.toFixed(2)),
+          });
+        } else {
+          // Absent record
+          records.push({
+            id: `a${userId}_${recordId++}`,
+            userId,
+            date: dateStr,
+            checkIn: null,
+            checkOut: null,
+            mode: 'field',
+            status: 'absent',
+            totalHours: 0,
+          });
+        }
+      }
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+  });
+  
+  return records;
+};
+
+// Merge existing records with generated data
+const existingRecords = [
   {
     id: 'a1',
     userId: '1',
@@ -162,6 +233,8 @@ export const attendanceRecords = [
   },
 ];
 
+export const attendanceRecords = [...existingRecords, ...generateAttendanceData()];
+
 export const tasks = [
   {
     id: 't1',
@@ -207,7 +280,7 @@ export const tasks = [
     title: 'Prepare sales presentation',
     description: 'Create presentation for next week client meeting',
     type: 'administrative',
-    status: 'pending',
+    status: 'todo',
     priority: 'low',
     dueDate: '2025-02-23T15:00:00',
   },
@@ -217,7 +290,7 @@ export const tasks = [
     title: 'Visit Tech Solutions Inc',
     description: 'Demo of new product line',
     type: 'visit',
-    status: 'pending',
+    status: 'todo',
     priority: 'high',
     dueDate: '2025-02-23T10:00:00',
     location: { lat: 28.5355, lng: 77.3910, address: 'Tech Park, Noida' },
@@ -228,7 +301,7 @@ export const tasks = [
     title: 'Submit weekly report',
     description: 'Compile and submit weekly sales report',
     type: 'administrative',
-    status: 'pending',
+    status: 'todo',
     priority: 'medium',
     dueDate: '2025-02-23T17:00:00',
   },
@@ -238,7 +311,7 @@ export const tasks = [
     title: 'Client meeting at Cyber City',
     description: 'Negotiation for bulk order',
     type: 'meeting',
-    status: 'pending',
+    status: 'todo',
     priority: 'high',
     dueDate: '2025-02-24T11:00:00',
     location: { lat: 28.4950, lng: 77.0890, address: 'Cyber City, Gurgaon' },
@@ -259,7 +332,7 @@ export const tasks = [
     title: 'Follow-up with RetailMart',
     description: 'Check on previous order and gather feedback',
     type: 'call',
-    status: 'pending',
+    status: 'todo',
     priority: 'medium',
     dueDate: '2025-02-23T09:00:00',
   },
@@ -279,7 +352,7 @@ export const tasks = [
     title: 'Product demo at Enterprise Systems',
     description: 'Showcase new product line to potential enterprise client',
     type: 'meeting',
-    status: 'pending',
+    status: 'todo',
     priority: 'high',
     dueDate: '2025-02-23T14:00:00',
     location: { lat: 28.4950, lng: 77.0890, address: 'DLF Cyber City, Gurgaon' },
@@ -290,7 +363,7 @@ export const tasks = [
     title: 'Follow-up call with MegaMart',
     description: 'Discuss Q2 inventory requirements',
     type: 'call',
-    status: 'pending',
+    status: 'todo',
     priority: 'medium',
     dueDate: '2025-02-23T16:00:00',
   },
@@ -310,7 +383,7 @@ export const tasks = [
     title: 'Visit NewTech Solutions',
     description: 'Initial meeting with new lead',
     type: 'visit',
-    status: 'pending',
+    status: 'todo',
     priority: 'medium',
     dueDate: '2025-02-24T15:00:00',
     location: { lat: 28.6280, lng: 77.3768, address: 'Sector 62, Noida' },
@@ -321,7 +394,7 @@ export const tasks = [
     title: 'Weekly sales report',
     description: 'Compile and submit weekly performance metrics',
     type: 'administrative',
-    status: 'pending',
+    status: 'todo',
     priority: 'low',
     dueDate: '2025-02-23T18:00:00',
   },
@@ -331,7 +404,7 @@ export const tasks = [
     title: 'Training session at ShopEasy',
     description: 'Product training for store staff',
     type: 'visit',
-    status: 'pending',
+    status: 'todo',
     priority: 'medium',
     dueDate: '2025-02-25T11:00:00',
     location: { lat: 28.4089, lng: 77.3178, address: 'Sector 18, Noida' },
@@ -342,7 +415,7 @@ export const tasks = [
     title: 'Contract negotiation call',
     description: 'Discuss terms with Global Retail Chain',
     type: 'call',
-    status: 'pending',
+    status: 'todo',
     priority: 'high',
     dueDate: '2025-02-24T10:00:00',
   },
@@ -352,7 +425,7 @@ export const tasks = [
     title: 'Site visit - New warehouse location',
     description: 'Inspect potential distribution center',
     type: 'visit',
-    status: 'pending',
+    status: 'todo',
     priority: 'low',
     dueDate: '2025-02-26T09:00:00',
     location: { lat: 28.4595, lng: 77.0266, address: 'Manesar, Gurgaon' },
@@ -373,7 +446,7 @@ export const tasks = [
     title: 'Quarterly business review with Star Labs',
     description: 'Review Q1 performance and Q2 planning',
     type: 'meeting',
-    status: 'pending',
+    status: 'todo',
     priority: 'high',
     dueDate: '2025-02-27T14:00:00',
     location: { lat: 28.6139, lng: 77.2090, address: 'Star Labs, Delhi' },
@@ -384,7 +457,7 @@ export const tasks = [
     title: 'Market research - Competitor analysis',
     description: 'Visit competitor stores and collect pricing data',
     type: 'visit',
-    status: 'pending',
+    status: 'todo',
     priority: 'low',
     dueDate: '2025-02-25T14:00:00',
   },
@@ -394,7 +467,7 @@ export const tasks = [
     title: 'Inventory reconciliation',
     description: 'Match delivered vs ordered quantities',
     type: 'administrative',
-    status: 'pending',
+    status: 'todo',
     priority: 'medium',
     dueDate: '2025-02-24T16:00:00',
   },
@@ -404,7 +477,7 @@ export const tasks = [
     title: 'Emergency service call',
     description: 'Address product issue at customer site',
     type: 'visit',
-    status: 'pending',
+    status: 'todo',
     priority: 'high',
     dueDate: '2025-02-23T13:00:00',
     location: { lat: 28.7041, lng: 77.1025, address: 'Metro Store 54' },
@@ -415,7 +488,7 @@ export const tasks = [
     title: 'Partnership discussion',
     description: 'Explore collaboration opportunities with local distributor',
     type: 'meeting',
-    status: 'pending',
+    status: 'todo',
     priority: 'medium',
     dueDate: '2025-02-26T15:00:00',
   },
@@ -425,7 +498,7 @@ export const tasks = [
     title: 'Social media promotion planning',
     description: 'Create content calendar for product launches',
     type: 'administrative',
-    status: 'pending',
+    status: 'todo',
     priority: 'low',
     dueDate: '2025-02-27T10:00:00',
   },
@@ -435,7 +508,7 @@ export const tasks = [
     title: 'Technical consultation',
     description: 'Help client with product integration',
     type: 'call',
-    status: 'pending',
+    status: 'todo',
     priority: 'high',
     dueDate: '2025-02-24T11:00:00',
   },
@@ -455,7 +528,7 @@ export const tasks = [
     title: 'Client appreciation event',
     description: 'Organize thank you lunch for top clients',
     type: 'meeting',
-    status: 'pending',
+    status: 'todo',
     priority: 'low',
     dueDate: '2025-02-29T13:00:00',
   },
@@ -465,7 +538,7 @@ export const tasks = [
     title: 'Product installation supervision',
     description: 'Oversee installation at enterprise client',
     type: 'visit',
-    status: 'pending',
+    status: 'todo',
     priority: 'medium',
     dueDate: '2025-02-25T10:00:00',
     location: { lat: 28.4950, lng: 77.0890, address: 'Cyber City, Gurgaon' },
@@ -476,7 +549,7 @@ export const tasks = [
     title: 'Budget review meeting',
     description: 'Review monthly expenses and optimize spending',
     type: 'meeting',
-    status: 'pending',
+    status: 'todo',
     priority: 'medium',
     dueDate: '2025-02-26T11:00:00',
   },
@@ -486,7 +559,7 @@ export const tasks = [
     title: 'Cold calling session',
     description: 'Contact 15 new prospects from lead list',
     type: 'call',
-    status: 'pending',
+    status: 'todo',
     priority: 'medium',
     dueDate: '2025-02-24T14:00:00',
   },
@@ -506,7 +579,7 @@ export const tasks = [
     title: 'Territory expansion planning',
     description: 'Identify new areas for market penetration',
     type: 'administrative',
-    status: 'pending',
+    status: 'todo',
     priority: 'low',
     dueDate: '2025-02-27T16:00:00',
   },
@@ -516,7 +589,7 @@ export const tasks = [
     title: 'Performance review preparation',
     description: 'Compile monthly achievements and metrics',
     type: 'administrative',
-    status: 'pending',
+    status: 'todo',
     priority: 'medium',
     dueDate: '2025-02-28T18:00:00',
   },
@@ -526,7 +599,7 @@ export const tasks = [
     title: 'Product demonstration workshop',
     description: 'Conduct hands-on training for potential buyers',
     type: 'meeting',
-    status: 'pending',
+    status: 'todo',
     priority: 'high',
     dueDate: '2025-02-25T13:00:00',
     location: { lat: 28.5355, lng: 77.3910, address: 'Tech Park, Noida' },
@@ -537,7 +610,7 @@ export const tasks = [
     title: 'Renewal discussion',
     description: 'Discuss contract renewal with existing client',
     type: 'call',
-    status: 'pending',
+    status: 'todo',
     priority: 'high',
     dueDate: '2025-02-24T15:00:00',
   },
@@ -547,7 +620,7 @@ export const tasks = [
     title: 'Invoice follow-up',
     description: 'Contact clients with pending payments',
     type: 'call',
-    status: 'pending',
+    status: 'todo',
     priority: 'medium',
     dueDate: '2025-02-26T10:00:00',
   },
@@ -557,7 +630,7 @@ export const tasks = [
     title: 'Product launch event',
     description: 'Attend and network at new product unveiling',
     type: 'meeting',
-    status: 'pending',
+    status: 'todo',
     priority: 'low',
     dueDate: '2025-02-28T16:00:00',
   },
@@ -567,7 +640,7 @@ export const tasks = [
     title: 'Customer loyalty program setup',
     description: 'Enroll top customers in rewards program',
     type: 'administrative',
-    status: 'pending',
+    status: 'todo',
     priority: 'low',
     dueDate: '2025-02-27T11:00:00',
   },
@@ -577,7 +650,7 @@ export const tasks = [
     title: 'Safety compliance check',
     description: 'Ensure all client sites meet safety standards',
     type: 'visit',
-    status: 'pending',
+    status: 'todo',
     priority: 'medium',
     dueDate: '2025-02-26T14:00:00',
     location: { lat: 28.6315, lng: 77.2167, address: 'Connaught Place, Delhi' },
@@ -588,7 +661,7 @@ export const tasks = [
     title: 'Upsell opportunity assessment',
     description: 'Identify cross-sell opportunities with existing clients',
     type: 'call',
-    status: 'pending',
+    status: 'todo',
     priority: 'medium',
     dueDate: '2025-02-25T16:00:00',
   },
@@ -598,7 +671,7 @@ export const tasks = [
     title: 'Team coordination meeting',
     description: 'Sync with team on weekly goals and challenges',
     type: 'meeting',
-    status: 'pending',
+    status: 'todo',
     priority: 'low',
     dueDate: '2025-02-24T09:00:00',
   },
@@ -608,7 +681,7 @@ export const tasks = [
     title: 'Reference visit arrangement',
     description: 'Schedule site visit for prospect to meet happy customer',
     type: 'administrative',
-    status: 'pending',
+    status: 'todo',
     priority: 'medium',
     dueDate: '2025-02-25T12:00:00',
   },
@@ -618,7 +691,7 @@ export const tasks = [
     title: 'Price negotiation',
     description: 'Finalize pricing for bulk order with new client',
     type: 'call',
-    status: 'pending',
+    status: 'todo',
     priority: 'high',
     dueDate: '2025-02-23T15:00:00',
   },
@@ -628,7 +701,7 @@ export const tasks = [
     title: 'Seasonal promotion planning',
     description: 'Design special offers for upcoming festival season',
     type: 'administrative',
-    status: 'pending',
+    status: 'todo',
     priority: 'low',
     dueDate: '2025-02-28T14:00:00',
   },
@@ -1106,7 +1179,7 @@ export const orders = [
     subtotal: 217500,
     tax: 39150,
     total: 256650,
-    status: 'pending',
+    status: 'todo',
     createdAt: '2025-02-22T14:30:00',
     paymentMethod: 'cash',
     deliveryDate: '2025-02-25',
@@ -1289,7 +1362,7 @@ export const expenses = [
     amount: 1250,
     description: 'Client lunch meeting at restaurant',
     receipt: 'receipt2.pdf',
-    status: 'pending',
+    status: 'todo',
   },
   {
     id: 'e3',
@@ -1335,7 +1408,7 @@ export const expenses = [
     amount: 720,
     description: 'Fuel expenses',
     receipt: 'receipt6.pdf',
-    status: 'pending',
+    status: 'todo',
   },
   {
     id: 'e7',
@@ -1345,7 +1418,7 @@ export const expenses = [
     amount: 1200,
     description: 'Product samples for demonstration',
     receipt: 'receipt7.pdf',
-    status: 'pending',
+    status: 'todo',
   },
 ];
 
@@ -1826,7 +1899,7 @@ export const leaveApplications = [
     days: 2,
     remarks: 'Need to attend family function',
     supervisorId: '3',
-    status: 'pending',
+    status: 'todo',
     appliedAt: '2025-02-20T10:00:00',
   },
   {
@@ -1869,7 +1942,7 @@ export const leaveApplications = [
     days: 1,
     remarks: 'Routine health checkup',
     supervisorId: '3',
-    status: 'pending',
+    status: 'todo',
     appliedAt: '2025-02-22T11:00:00',
   },
   {
@@ -1927,7 +2000,7 @@ export const leaveApplications = [
     days: 2,
     remarks: 'Personal commitments',
     supervisorId: null,
-    status: 'pending',
+    status: 'todo',
     appliedAt: '2025-04-28T14:00:00',
   },
 ];

@@ -11,6 +11,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+
 function Map({
   center = [28.6139, 77.2090],
   zoom = 12,
@@ -28,12 +29,54 @@ function Map({
     }
   }, [markers]);
 
+  // Ensure Leaflet elements don't exceed sidebar z-index on mobile
+  useEffect(() => {
+    const setLeafletZIndex = () => {
+      if (window.innerWidth < 1024 && mapRef.current) {
+        const container = mapRef.current.getContainer();
+        if (container) {
+          // Set z-index on all Leaflet panes
+          const panes = container.querySelectorAll('.leaflet-pane');
+          panes.forEach((pane) => {
+            pane.style.zIndex = '0';
+          });
+          
+          // Set z-index on controls
+          const controls = container.querySelectorAll('.leaflet-control-container, .leaflet-top, .leaflet-bottom');
+          controls.forEach((control) => {
+            control.style.zIndex = '1';
+          });
+          
+          // Set z-index on popups
+          const popups = container.querySelectorAll('.leaflet-popup');
+          popups.forEach((popup) => {
+            popup.style.zIndex = '40';
+          });
+        }
+      }
+    };
+
+    // Set z-index after a short delay to ensure Leaflet has rendered
+    const timer = setTimeout(setLeafletZIndex, 100);
+    
+    // Also set on window resize and when map is ready
+    window.addEventListener('resize', setLeafletZIndex);
+    if (mapRef.current) {
+      mapRef.current.whenReady(setLeafletZIndex);
+    }
+    
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', setLeafletZIndex);
+    };
+  }, []);
+
   return (
-    <div className={className} style={{ height: '100%', minHeight: '400px' }}>
+    <div className={className} style={{ height: '100%', minHeight: '400px', position: 'relative', isolation: 'isolate' }}>
       <MapContainer
         center={center}
         zoom={zoom}
-        style={{ height: '100%', width: '100%' }}
+        style={{ height: '100%', width: '100%', position: 'relative' }}
         ref={mapRef}
       >
         <TileLayer
