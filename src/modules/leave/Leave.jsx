@@ -118,9 +118,9 @@ function Leave() {
       ];
 
   return (
-    <div className="space-y-4 lg:space-y-6">
+    <div className="space-y-3">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Leave Management</h1>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           {isAdmin && activeTab === 'publicHolidays' && (
@@ -161,12 +161,12 @@ function Leave() {
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
+        <nav className="-mb-px flex space-x-6">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-2.5 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
                   ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -195,8 +195,13 @@ function Leave() {
             leaveApplications={myLeaves}
             getUserName={getUserName}
             isAdmin={isAdmin}
+            leaveConfigurations={leaveConfigurations}
             onEditHoliday={handleEditHoliday}
             onDeleteHoliday={handleDeleteHolidayClick}
+            onEditConfig={(config) => {
+              setEditingConfig(config);
+              setShowConfigModal(true);
+            }}
           />
         )}
 
@@ -209,67 +214,6 @@ function Leave() {
           />
         )}
       </div>
-
-      {/* Leave Configurations (Admin only) */}
-      {isAdmin && leaveConfigurations.length > 0 && (
-        <div className="mt-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-4 lg:p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Leave Configurations</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Designation
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Year
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Casual Leave
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Sick Leave
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {leaveConfigurations.map(config => (
-                    <tr key={config.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">
-                        {config.designation}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {config.year}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {config.casualLeavePerYear} days
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {config.sickLeavePerYear} days
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button
-                          onClick={() => {
-                            setEditingConfig(config);
-                            setShowConfigModal(true);
-                          }}
-                          className="text-primary-600 hover:text-primary-800 font-medium"
-                        >
-                          Edit
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modals */}
       <ApplyLeaveModal

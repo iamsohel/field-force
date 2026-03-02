@@ -12,21 +12,21 @@ function StatCard({ icon: Icon, title, value, subtitle, trend, color = 'primary'
   };
 
   return (
-    <div className={cn('card p-6', className)}>
+    <div className={cn('card p-4', className)}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
-          {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+          <p className="text-xs font-medium text-gray-600 mb-0.5">{title}</p>
+          <p className="text-xl font-bold text-gray-900">{value}</p>
+          {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
         </div>
         {Icon && (
-          <div className={cn('p-3 rounded-lg', colorClasses[color])}>
-            <Icon className="w-6 h-6" />
+          <div className={cn('p-2.5 rounded-lg', colorClasses[color])}>
+            <Icon className="w-5 h-5" />
           </div>
         )}
       </div>
       {trend && (
-        <div className="mt-3 flex items-center gap-1 text-sm">
+        <div className="mt-2 flex items-center gap-1 text-sm">
           <span className={trend.value >= 0 ? 'text-green-600' : 'text-red-600'}>
             {trend.value >= 0 ? '↑' : '↓'} {Math.abs(trend.value)}%
           </span>

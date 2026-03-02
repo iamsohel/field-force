@@ -22,6 +22,9 @@ import Reports from '@modules/reports/Reports';
 import Expenses from '@modules/expenses/Expenses';
 import Territory from '@modules/territory/Territory';
 import Leave from '@modules/leave/Leave';
+import Leads from '@modules/leads/Leads';
+import CompanyDetails from '@modules/leads/CompanyDetails';
+import CustomerDetails from '@modules/leads/CustomerDetails';
 import Settings from '@modules/settings/Settings';
 
 function App() {
@@ -51,6 +54,9 @@ function App() {
         <Route path="expenses" element={<Expenses />} />
         <Route path="territory" element={<Territory />} />
         <Route path="leave" element={<Leave />} />
+        <Route path="leads" element={<Leads />} />
+        <Route path="leads/company/:id" element={<CompanyDetails />} />
+        <Route path="leads/customer/:id" element={<CustomerDetails />} />
         <Route path="settings" element={<Settings />} />
       </Route>
 

@@ -362,6 +362,38 @@ export const territoriesApi = {
     );
     return { success: true, data: userTerritories };
   },
+
+  create: async (data) => {
+    await delay();
+    const newTerritory = {
+      id: `ter${Date.now()}`,
+      ...data,
+      assignedUsers: data.assignedUsers || [],
+      customers: data.customers || 0,
+    };
+    mockData.territories.push(newTerritory);
+    return { success: true, data: newTerritory };
+  },
+
+  update: async (id, data) => {
+    await delay();
+    const index = mockData.territories.findIndex(t => t.id === id);
+    if (index === -1) {
+      return { success: false, error: 'Territory not found' };
+    }
+    mockData.territories[index] = { ...mockData.territories[index], ...data };
+    return { success: true, data: mockData.territories[index] };
+  },
+
+  delete: async (id) => {
+    await delay();
+    const index = mockData.territories.findIndex(t => t.id === id);
+    if (index === -1) {
+      return { success: false, error: 'Territory not found' };
+    }
+    mockData.territories.splice(index, 1);
+    return { success: true };
+  },
 };
 
 // Notifications API
@@ -374,6 +406,103 @@ export const notificationsApi = {
 
   markAsRead: async (id) => {
     await delay();
+    return { success: true };
+  },
+};
+
+// Companies API
+export const companiesApi = {
+  getAll: async () => {
+    await delay();
+    return { success: true, data: mockData.companies };
+  },
+
+  getById: async (id) => {
+    await delay();
+    const company = mockData.companies.find(c => c.id === id);
+    return { success: !!company, data: company };
+  },
+
+  create: async (data) => {
+    await delay();
+    const newCompany = {
+      id: `comp${Date.now()}`,
+      ...data,
+      createdAt: new Date().toISOString(),
+    };
+    mockData.companies.push(newCompany);
+    return { success: true, data: newCompany };
+  },
+
+  update: async (id, data) => {
+    await delay();
+    const index = mockData.companies.findIndex(c => c.id === id);
+    if (index === -1) {
+      return { success: false, error: 'Company not found' };
+    }
+    mockData.companies[index] = { ...mockData.companies[index], ...data };
+    return { success: true, data: mockData.companies[index] };
+  },
+
+  delete: async (id) => {
+    await delay();
+    const index = mockData.companies.findIndex(c => c.id === id);
+    if (index === -1) {
+      return { success: false, error: 'Company not found' };
+    }
+    mockData.companies.splice(index, 1);
+    return { success: true };
+  },
+};
+
+// Leads Customers API
+export const leadsCustomersApi = {
+  getAll: async () => {
+    await delay();
+    return { success: true, data: mockData.leadsCustomers };
+  },
+
+  getById: async (id) => {
+    await delay();
+    const customer = mockData.leadsCustomers.find(c => c.id === id);
+    return { success: !!customer, data: customer };
+  },
+
+  create: async (data) => {
+    await delay();
+    const company = data.companyId ? mockData.companies.find(c => c.id === data.companyId) : null;
+    const newCustomer = {
+      id: `lead${Date.now()}`,
+      ...data,
+      companyName: company?.name || null,
+      createdAt: new Date().toISOString(),
+    };
+    mockData.leadsCustomers.push(newCustomer);
+    return { success: true, data: newCustomer };
+  },
+
+  update: async (id, data) => {
+    await delay();
+    const index = mockData.leadsCustomers.findIndex(c => c.id === id);
+    if (index === -1) {
+      return { success: false, error: 'Customer not found' };
+    }
+    const company = data.companyId ? mockData.companies.find(c => c.id === data.companyId) : null;
+    mockData.leadsCustomers[index] = {
+      ...mockData.leadsCustomers[index],
+      ...data,
+      companyName: company?.name || null,
+    };
+    return { success: true, data: mockData.leadsCustomers[index] };
+  },
+
+  delete: async (id) => {
+    await delay();
+    const index = mockData.leadsCustomers.findIndex(c => c.id === id);
+    if (index === -1) {
+      return { success: false, error: 'Customer not found' };
+    }
+    mockData.leadsCustomers.splice(index, 1);
     return { success: true };
   },
 };
