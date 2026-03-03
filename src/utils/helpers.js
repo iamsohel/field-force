@@ -49,6 +49,21 @@ export const formatRelativeTime = (date) => {
   }
 };
 
+// Get user initials for avatar
+export const getUserInitials = (user) => {
+  if (!user || !user.name) return 'U';
+  const names = user.name.split(' ');
+  if (names.length >= 2) {
+    return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+  }
+  return user.name.substring(0, 2).toUpperCase();
+};
+
+// Get user avatar or return null
+export const getUserAvatar = (user) => {
+  return user?.avatar || null;
+};
+
 // Permission utilities
 export const hasPermission = (user, permission) => {
   const permissions = {

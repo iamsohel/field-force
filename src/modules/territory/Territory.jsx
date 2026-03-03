@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Map as MapIcon, Users, Plus, Edit2, Trash2 } from 'lucide-react';
 import { useAuthStore } from '@store/authStore';
 import { territoriesApi } from '@services/api';
@@ -15,6 +15,10 @@ function Territory() {
   const [editingTerritory, setEditingTerritory] = useState(null);
   const [deleteTerritory, setDeleteTerritory] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedTerritory, setSelectedTerritory] = useState(null);
+  const [mapCenter, setMapCenter] = useState([23.8103, 90.4125]); // Default to Dhaka
+  const [mapZoom, setMapZoom] = useState(11);
+  const markerRefs = useRef({});
 
   useEffect(() => {
     if (user) {
@@ -72,6 +76,21 @@ function Territory() {
     }
   };
 
+  const handleTerritoryClick = (territory) => {
+    setSelectedTerritory(territory);
+    // Center map on territory location
+    setMapCenter([territory.centerLat, territory.centerLng]);
+    setMapZoom(12);
+    
+    // Open popup after a short delay to ensure map has updated
+    setTimeout(() => {
+      const markerRef = markerRefs.current[territory.id];
+      if (markerRef && markerRef.openPopup) {
+        markerRef.openPopup();
+      }
+    }, 300);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -98,7 +117,15 @@ function Territory() {
                 territories.map(territory => (
                   <div
                     key={territory.id}
-                    className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                    onClick={(e) => {
+                      // Don't trigger if clicking on buttons
+                      if (!e.target.closest('button')) {
+                        handleTerritoryClick(territory);
+                      }
+                    }}
+                    className={`p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-all ${
+                      selectedTerritory?.id === territory.id ? 'ring-2 ring-primary-500 bg-primary-50' : ''
+                    }`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
@@ -113,14 +140,20 @@ function Territory() {
                         {isAdmin && (
                           <div className="flex items-center gap-1">
                             <button
-                              onClick={() => handleEdit(territory)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(territory);
+                              }}
                               className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
                               title="Edit territory"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleDelete(territory)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(territory);
+                              }}
                               className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
                               title="Delete territory"
                             >
@@ -166,16 +199,21 @@ function Territory() {
           <Card title="Territory Map" className="h-[700px]">
             <div className="h-full">
               <Map
-                center={[23.8103, 90.4125]}
-                zoom={11}
+                center={mapCenter}
+                zoom={mapZoom}
                 markers={territories.map(t => ({
+                  id: t.id,
                   lat: t.centerLat || t.coordinates?.[0]?.[0] || 23.8103,
                   lng: t.centerLng || t.coordinates?.[0]?.[1] || 90.4125,
                   popup: {
                     title: t.name,
                     description: t.description,
+                    salespersons: `${t.assignedUsers.length} salesperson(s)`,
+                    area: t.area,
+                    customers: t.customers ? `${t.customers} customers` : null,
                   },
                 }))}
+                markerRefs={markerRefs}
               />
             </div>
           </Card>

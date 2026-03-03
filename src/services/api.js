@@ -314,12 +314,36 @@ export const visitsApi = {
   getByUserId: async (userId, startDate, endDate) => {
     await delay();
     const user = mockData.users.find(u => u.id === userId);
-    // For admin, return all visits
-    if (user?.role === 'admin') {
-      return { success: true, data: mockData.visits };
+    let visits = [];
+    
+    // For admin or 'all', return all visits
+    if (user?.role === 'admin' || userId === 'all') {
+      visits = [...mockData.visits];
+    } else {
+      visits = mockData.visits.filter(v => v.userId === userId);
     }
-    const userVisits = mockData.visits.filter(v => v.userId === userId);
-    return { success: true, data: userVisits };
+    
+    // Add customer names to visits
+    visits = visits.map(visit => {
+      const customer = mockData.customers.find(c => c.id === visit.customerId);
+      return {
+        ...visit,
+        customerName: customer?.name || 'Unknown Customer',
+      };
+    });
+    
+    // Filter by date range if provided
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      visits = visits.filter(v => {
+        if (!v.checkIn) return false;
+        const checkInDate = new Date(v.checkIn);
+        return checkInDate >= start && checkInDate <= end;
+      });
+    }
+    
+    return { success: true, data: visits };
   },
 };
 
@@ -626,7 +650,21 @@ export const locationApi = {
 
   getLocationHistory: async (userId, startDate, endDate) => {
     await delay();
-    const history = mockData.locationHistory.filter(l => l.userId === userId);
+    let history = mockData.locationHistory.filter(l => l.userId === userId);
+    
+    // Filter by date range if provided
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      history = history.filter(l => {
+        const timestamp = new Date(l.timestamp);
+        return timestamp >= start && timestamp <= end;
+      });
+    }
+    
+    // Sort by timestamp descending
+    history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
     return { success: true, data: history };
   },
 
@@ -636,6 +674,36 @@ export const locationApi = {
       .filter(l => l.userId === userId)
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
     return { success: true, data: latest };
+  },
+
+  getAllLiveLocations: async () => {
+    await delay();
+    // Get latest location for each user (simulating live tracking)
+    const userLocations = {};
+    mockData.locationHistory
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .forEach(loc => {
+        if (!userLocations[loc.userId]) {
+          const user = mockData.users.find(u => u.id === loc.userId);
+          userLocations[loc.userId] = {
+            userId: loc.userId,
+            userName: user?.name || `User ${loc.userId}`,
+            lat: loc.location.lat,
+            lng: loc.location.lng,
+            timestamp: loc.timestamp,
+            status: 'active',
+          };
+        }
+      });
+    
+    // Return only non-admin users
+    return {
+      success: true,
+      data: Object.values(userLocations).filter(loc => {
+        const user = mockData.users.find(u => u.id === loc.userId);
+        return user && user.role !== 'admin';
+      }),
+    };
   },
 };
 

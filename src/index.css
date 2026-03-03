@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom employee marker styles */
+.custom-employee-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-employee-marker img {
+  border-radius: 50%;
+}
+
+/* Custom tooltip styles */
+.leaflet-tooltip.custom-tooltip {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 @layer base {
   * {
     @apply border-gray-200;

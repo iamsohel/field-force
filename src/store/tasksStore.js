@@ -126,4 +126,53 @@ export const useTasksStore = create((set, get) => ({
       return false;
     }
   },
+
+  reorderTasks: (draggedTaskId, targetTaskId, status) => {
+    const currentTasks = get().tasks;
+    const draggedTask = currentTasks.find(t => t.id === draggedTaskId);
+    const targetTask = currentTasks.find(t => t.id === targetTaskId);
+    
+    if (!draggedTask || !targetTask || draggedTask.status !== status || targetTask.status !== status) {
+      return false;
+    }
+
+    // Get all tasks with the same status, maintaining their order
+    const sameStatusTasks = currentTasks.filter(t => t.status === status);
+    
+    // Remove dragged task from same status tasks
+    const tasksWithoutDragged = sameStatusTasks.filter(t => t.id !== draggedTaskId);
+    
+    // Find target index in the filtered array
+    const targetIndex = tasksWithoutDragged.findIndex(t => t.id === targetTaskId);
+    
+    if (targetIndex === -1) {
+      return false;
+    }
+    
+    // Insert dragged task at target position
+    const reorderedTasks = [...tasksWithoutDragged];
+    reorderedTasks.splice(targetIndex, 0, draggedTask);
+    
+    // Create a map of reordered tasks for quick lookup
+    const reorderedMap = new Map(reorderedTasks.map((t, idx) => [t.id, { task: t, order: idx }]));
+    
+    // Rebuild the full tasks array maintaining order of other statuses
+    const result = [];
+    let reorderedIndex = 0;
+    
+    currentTasks.forEach(task => {
+      if (task.status === status) {
+        // Replace with reordered task at the correct position
+        if (reorderedIndex < reorderedTasks.length) {
+          result.push(reorderedTasks[reorderedIndex]);
+          reorderedIndex++;
+        }
+      } else {
+        result.push(task);
+      }
+    });
+    
+    set({ tasks: result });
+    return true;
+  },
 }));

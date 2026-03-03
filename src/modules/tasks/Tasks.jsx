@@ -14,7 +14,7 @@ import { usersApi } from '@services/api';
 
 function Tasks() {
   const { user } = useAuthStore();
-  const { tasks, fetchTasks, updateTaskStatus, updateTask, deleteTask, isLoading } = useTasksStore();
+  const { tasks, fetchTasks, updateTaskStatus, updateTask, deleteTask, reorderTasks, isLoading } = useTasksStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -30,6 +30,8 @@ function Tasks() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10); // For list view pagination
   const [draggedTask, setDraggedTask] = useState(null);
+  const [dragOverTask, setDragOverTask] = useState(null);
+  const [dragOverPosition, setDragOverPosition] = useState(null); // 'above' or 'below'
   const isAdmin = user?.role === 'admin';
 
   // Fetch all users for admin dropdown
@@ -106,6 +108,7 @@ function Tasks() {
   const handleDragStart = (e, task) => {
     setDraggedTask(task);
     e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/json', JSON.stringify(task));
     e.dataTransfer.setData('text/html', task.id);
     
     // Make original element semi-transparent and add scale
@@ -113,6 +116,21 @@ function Tasks() {
     e.currentTarget.style.transform = 'scale(0.95)';
     e.currentTarget.style.transition = 'all 0.2s ease';
     e.currentTarget.style.cursor = 'grabbing';
+  };
+
+  // Clear all drop zone visual feedback
+  const clearAllDropZones = () => {
+    // Find all drop zones by data attribute and clear their styles
+    const dropZones = document.querySelectorAll('[data-drop-zone="kanban-column"]');
+    dropZones.forEach(zone => {
+      zone.classList.remove('drag-over');
+      zone.style.backgroundColor = '';
+      zone.style.borderColor = '';
+      zone.style.borderWidth = '';
+      zone.style.borderStyle = '';
+      zone.style.borderRadius = '';
+      zone.style.transition = '';
+    });
   };
 
   const handleDragEnd = (e) => {
@@ -126,7 +144,13 @@ function Tasks() {
       e.currentTarget.style.transition = '';
       delete e.currentTarget.dataset.justDragged;
     }, 200);
+    
+    // Clear all drop zone visual feedback
+    clearAllDropZones();
+    
     setDraggedTask(null);
+    setDragOverTask(null);
+    setDragOverPosition(null);
   };
 
   const handleDragOver = (e) => {
@@ -163,17 +187,44 @@ function Tasks() {
     }
   };
 
-  const handleDrop = async (e, targetStatus) => {
+  const handleTaskDragOver = (e, task) => {
     e.preventDefault();
     e.stopPropagation();
     
-    const dropZone = e.currentTarget;
-    // Remove visual feedback
-    dropZone.classList.remove('drag-over');
-    dropZone.style.backgroundColor = '';
-    dropZone.style.borderColor = '';
-    dropZone.style.borderWidth = '';
-    dropZone.style.borderStyle = '';
+    if (!draggedTask || draggedTask.id === task.id) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const midpoint = rect.height / 2;
+    
+    // Determine if dragging above or below the task
+    const position = y < midpoint ? 'above' : 'below';
+    
+    setDragOverTask(task.id);
+    setDragOverPosition(position);
+  };
+
+  const handleTaskDragLeave = (e) => {
+    // Only clear if we're actually leaving the task card
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setDragOverTask(null);
+      setDragOverPosition(null);
+    }
+  };
+
+  const handleTaskDrop = async (e, targetTask, targetStatus) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Clear all drop zone visual feedback
+    clearAllDropZones();
+    
+    setDragOverTask(null);
+    setDragOverPosition(null);
     
     // Get task data from drag event or state
     let taskToMove = draggedTask;
@@ -182,10 +233,8 @@ function Tasks() {
         const data = e.dataTransfer.getData('application/json');
         if (data) {
           const parsedData = JSON.parse(data);
-          // Find the actual task from the tasks array
           taskToMove = tasks.find(t => t.id === parsedData.id);
           if (!taskToMove) {
-            // Fallback to parsed data if task not found
             taskToMove = parsedData;
           }
         }
@@ -194,7 +243,51 @@ function Tasks() {
       }
     }
     
-    // Also try to get from dataTransfer text/html as fallback
+    if (!taskToMove) {
+      const taskId = e.dataTransfer.getData('text/html');
+      if (taskId) {
+        taskToMove = tasks.find(t => t.id === taskId);
+      }
+    }
+    
+    if (!taskToMove) return;
+    
+    // If same status, reorder within column
+    if (taskToMove.status === targetStatus && taskToMove.id !== targetTask.id) {
+      reorderTasks(taskToMove.id, targetTask.id, targetStatus);
+    } 
+    // If different status, move to new column
+    else if (taskToMove.status !== targetStatus) {
+      await updateTaskStatus(taskToMove.id, targetStatus, true);
+    }
+    
+    setDraggedTask(null);
+  };
+
+  const handleDrop = async (e, targetStatus) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Clear all drop zone visual feedback
+    clearAllDropZones();
+    
+    // Get task data from drag event or state
+    let taskToMove = draggedTask;
+    if (!taskToMove) {
+      try {
+        const data = e.dataTransfer.getData('application/json');
+        if (data) {
+          const parsedData = JSON.parse(data);
+          taskToMove = tasks.find(t => t.id === parsedData.id);
+          if (!taskToMove) {
+            taskToMove = parsedData;
+          }
+        }
+      } catch (err) {
+        console.error('Error parsing drag data:', err);
+      }
+    }
+    
     if (!taskToMove) {
       const taskId = e.dataTransfer.getData('text/html');
       if (taskId) {
@@ -210,6 +303,8 @@ function Tasks() {
       }
     }
     setDraggedTask(null);
+    setDragOverTask(null);
+    setDragOverPosition(null);
   };
 
   // Get user initials for avatar
@@ -501,7 +596,7 @@ function Tasks() {
               </div>
             </div>
           )}
-        </div>
+                </div>
       </Card>
 
       {/* Content */}
@@ -509,52 +604,71 @@ function Tasks() {
         <div className="text-center py-8 text-gray-500">Loading tasks...</div>
       ) : viewType === 'kanban' ? (
         /* Kanban View - Only Todo, In Progress, Completed */
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
             {/* Todo */}
             <Card title="Todo" subtitle={`${todoTasks.length} tasks`} className="bg-gray-50">
               <div
-                className="space-y-3 max-h-[600px] overflow-y-auto min-h-[200px] pr-2 bg-gray-50 rounded-lg"
+                data-drop-zone="kanban-column"
+                className="space-y-2 max-h-[600px] overflow-y-auto min-h-[200px] pr-2 bg-gray-50 rounded-lg"
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, 'todo')}
               >
-                {todoTasks.map(task => {
+                {todoTasks.map((task, index) => {
                   const priorityBarColor = {
                     high: 'bg-red-500',
                     medium: 'bg-yellow-500',
                     low: 'bg-blue-500',
                   }[task.priority] || 'bg-gray-500';
                   
+                  const isDragOver = dragOverTask === task.id;
+                  const showAboveIndicator = isDragOver && dragOverPosition === 'above';
+                  const showBelowIndicator = isDragOver && dragOverPosition === 'below';
+                  
                   return (
-                    <div
-                      key={task.id}
-                      draggable
-                      onDragStart={(e) => {
-                        e.stopPropagation();
-                        handleDragStart(e, task);
-                      }}
-                      onDragEnd={(e) => {
-                        e.stopPropagation();
-                        handleDragEnd(e);
-                      }}
-                      onDragOver={(e) => {
-                        // Prevent cards from blocking drop zones
-                        e.stopPropagation();
-                      }}
-                      onClick={(e) => {
-                        // Don't trigger click if we just finished dragging
-                        if (!e.currentTarget.dataset.justDragged) {
-                          handleCardClick(task, e);
-                        }
-                        delete e.currentTarget.dataset.justDragged;
-                      }}
-                      onMouseDown={(e) => {
-                        // Clear the flag when mouse is pressed
-                        delete e.currentTarget.dataset.justDragged;
-                      }}
-                      className="group bg-white border border-gray-200 rounded-lg p-3 cursor-move hover:shadow-lg transition-all duration-200 shadow-sm"
-                    >
+                    <div key={task.id}>
+                      {showAboveIndicator && (
+                        <div className="h-0.5 bg-blue-500 rounded-full mb-1 mx-2" />
+                      )}
+                      <div
+                        draggable
+                        onDragStart={(e) => {
+                          e.stopPropagation();
+                          handleDragStart(e, task);
+                        }}
+                        onDragEnd={(e) => {
+                          e.stopPropagation();
+                          handleDragEnd(e);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (draggedTask && draggedTask.status === 'todo' && draggedTask.id !== task.id) {
+                            handleTaskDragOver(e, task);
+                          }
+                        }}
+                        onDragLeave={handleTaskDragLeave}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleTaskDrop(e, task, 'todo');
+                        }}
+                        onClick={(e) => {
+                          // Don't trigger click if we just finished dragging
+                          if (!e.currentTarget.dataset.justDragged) {
+                            handleCardClick(task, e);
+                          }
+                          delete e.currentTarget.dataset.justDragged;
+                        }}
+                        onMouseDown={(e) => {
+                          // Clear the flag when mouse is pressed
+                          delete e.currentTarget.dataset.justDragged;
+                        }}
+                        className={`group bg-white border border-gray-200 rounded-lg p-3 cursor-move hover:shadow-lg transition-all duration-200 shadow-sm ${
+                          isDragOver ? 'ring-2 ring-blue-400' : ''
+                        }`}
+                      >
                       {/* Priority Bar */}
                       <div className={`h-1 ${priorityBarColor} rounded-t-lg -mx-3 -mt-3 mb-3`} />
                       
@@ -564,7 +678,7 @@ function Tasks() {
                       {/* Due Date */}
                       <div className="flex items-center gap-1.5 mb-3 text-xs text-gray-500">
                         <Calendar className="w-3.5 h-3.5" />
-                        <span>{formatDate(task.dueDate)}</span>
+                  <span>{formatDate(task.dueDate)}</span>
                       </div>
                       
                       {/* Footer: Responsible Person */}
@@ -579,51 +693,92 @@ function Tasks() {
                           ) : (
                             <div className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-medium border border-primary-200">
                               {getUserInitials(task.userId)}
-                            </div>
-                          )}
+                </div>
+                )}
                           <span className="text-xs text-gray-600">{getUserName(task.userId)}</span>
                         </div>
-                        <button
+                <button
                           onClick={(e) => handleDelete(task, e)}
                           className="p-1.5 hover:bg-red-50 text-red-600 rounded transition-colors opacity-0 group-hover:opacity-100"
                           title="Delete"
-                        >
+                >
                           <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                </button>
+              </div>
                       </div>
+                      {showBelowIndicator && (
+                        <div className="h-0.5 bg-blue-500 rounded-full mt-1 mx-2" />
+                      )}
                     </div>
                   );
                 })}
                 {todoTasks.length === 0 && (
                   <p className="text-sm text-gray-500 text-center py-8">No todo tasks</p>
-                )}
-              </div>
-            </Card>
+            )}
+          </div>
+        </Card>
 
             {/* In Progress */}
             <Card title="In Progress" subtitle={`${inProgressTasks.length} tasks`}>
               <div
-                className="space-y-3 max-h-[600px] overflow-y-auto min-h-[200px] pr-2 bg-gray-50 rounded-lg -mx-4 -mb-4 px-4 pb-4"
+                data-drop-zone="kanban-column"
+                className="space-y-2 max-h-[600px] overflow-y-auto min-h-[200px] pr-2 bg-gray-50 rounded-lg -mx-4 -mb-4 px-4 pb-4"
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, 'in-progress')}
               >
-                {inProgressTasks.map(task => {
+                {inProgressTasks.map((task, index) => {
                   const priorityBarColor = {
                     high: 'bg-red-500',
                     medium: 'bg-yellow-500',
                     low: 'bg-blue-500',
                   }[task.priority] || 'bg-gray-500';
                   
+                  const isDragOver = dragOverTask === task.id;
+                  const showAboveIndicator = isDragOver && dragOverPosition === 'above';
+                  const showBelowIndicator = isDragOver && dragOverPosition === 'below';
+                  
                   return (
-                    <div
-                      key={task.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, task)}
-                      onDragEnd={handleDragEnd}
-                      onClick={(e) => handleCardClick(task, e)}
-                      className="bg-white border border-gray-200 rounded-lg p-3 cursor-pointer hover:shadow-md transition-all duration-200"
-                    >
+                    <div key={task.id}>
+                      {showAboveIndicator && (
+                        <div className="h-0.5 bg-blue-500 rounded-full mb-1 mx-2" />
+                      )}
+                      <div
+                        draggable
+                        onDragStart={(e) => {
+                          e.stopPropagation();
+                          handleDragStart(e, task);
+                        }}
+                        onDragEnd={(e) => {
+                          e.stopPropagation();
+                          handleDragEnd(e);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (draggedTask && draggedTask.status === 'in-progress' && draggedTask.id !== task.id) {
+                            handleTaskDragOver(e, task);
+                          }
+                        }}
+                        onDragLeave={handleTaskDragLeave}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleTaskDrop(e, task, 'in-progress');
+                        }}
+                        onClick={(e) => {
+                          if (!e.currentTarget.dataset.justDragged) {
+                            handleCardClick(task, e);
+                          }
+                          delete e.currentTarget.dataset.justDragged;
+                        }}
+                        onMouseDown={(e) => {
+                          delete e.currentTarget.dataset.justDragged;
+                        }}
+                        className={`bg-white border border-gray-200 rounded-lg p-3 cursor-move hover:shadow-md transition-all duration-200 ${
+                          isDragOver ? 'ring-2 ring-blue-400' : ''
+                        }`}
+                      >
                       {/* Priority Bar */}
                       <div className={`h-1 ${priorityBarColor} rounded-t-lg -mx-3 -mt-3 mb-3`} />
                       
@@ -634,7 +789,7 @@ function Tasks() {
                       <div className="flex items-center gap-1.5 mb-3 text-xs text-gray-500">
                         <Calendar className="w-3.5 h-3.5" />
                         <span>{formatDate(task.dueDate)}</span>
-                      </div>
+                </div>
                       
                       {/* Footer: Responsible Person */}
                       <div className="flex items-center justify-between pt-2 border-t border-gray-100">
@@ -648,51 +803,92 @@ function Tasks() {
                           ) : (
                             <div className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-medium border border-primary-200">
                               {getUserInitials(task.userId)}
-                            </div>
-                          )}
+                </div>
+                )}
                           <span className="text-xs text-gray-600">{getUserName(task.userId)}</span>
                         </div>
-                        <button
+                <button
                           onClick={(e) => handleDelete(task, e)}
                           className="p-1.5 hover:bg-red-50 text-red-600 rounded transition-colors opacity-0 group-hover:opacity-100"
                           title="Delete"
-                        >
+                >
                           <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                </button>
+              </div>
                       </div>
+                      {showBelowIndicator && (
+                        <div className="h-0.5 bg-blue-500 rounded-full mt-1 mx-2" />
+                      )}
                     </div>
                   );
                 })}
-                {inProgressTasks.length === 0 && (
-                  <p className="text-sm text-gray-500 text-center py-8">No tasks in progress</p>
-                )}
-              </div>
-            </Card>
+            {inProgressTasks.length === 0 && (
+              <p className="text-sm text-gray-500 text-center py-8">No tasks in progress</p>
+            )}
+          </div>
+        </Card>
 
             {/* Completed */}
             <Card title="Completed" subtitle={`${completedTasks.length} tasks`}>
               <div
-                className="space-y-3 max-h-[600px] overflow-y-auto min-h-[200px] pr-2 bg-gray-50 rounded-lg -mx-4 -mb-4 px-4 pb-4"
+                data-drop-zone="kanban-column"
+                className="space-y-2 max-h-[600px] overflow-y-auto min-h-[200px] pr-2 bg-gray-50 rounded-lg -mx-4 -mb-4 px-4 pb-4"
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, 'completed')}
               >
-                {completedTasks.map(task => {
+                {completedTasks.map((task, index) => {
                   const priorityBarColor = {
                     high: 'bg-red-500',
                     medium: 'bg-yellow-500',
                     low: 'bg-blue-500',
                   }[task.priority] || 'bg-gray-500';
                   
+                  const isDragOver = dragOverTask === task.id;
+                  const showAboveIndicator = isDragOver && dragOverPosition === 'above';
+                  const showBelowIndicator = isDragOver && dragOverPosition === 'below';
+                  
                   return (
-                    <div
-                      key={task.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, task)}
-                      onDragEnd={handleDragEnd}
-                      onClick={(e) => handleCardClick(task, e)}
-                      className="bg-white border border-gray-200 rounded-lg p-3 cursor-pointer hover:shadow-md transition-all duration-200 opacity-75"
-                    >
+                    <div key={task.id}>
+                      {showAboveIndicator && (
+                        <div className="h-0.5 bg-blue-500 rounded-full mb-1 mx-2" />
+                      )}
+                      <div
+                        draggable
+                        onDragStart={(e) => {
+                          e.stopPropagation();
+                          handleDragStart(e, task);
+                        }}
+                        onDragEnd={(e) => {
+                          e.stopPropagation();
+                          handleDragEnd(e);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (draggedTask && draggedTask.status === 'completed' && draggedTask.id !== task.id) {
+                            handleTaskDragOver(e, task);
+                          }
+                        }}
+                        onDragLeave={handleTaskDragLeave}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleTaskDrop(e, task, 'completed');
+                        }}
+                        onClick={(e) => {
+                          if (!e.currentTarget.dataset.justDragged) {
+                            handleCardClick(task, e);
+                          }
+                          delete e.currentTarget.dataset.justDragged;
+                        }}
+                        onMouseDown={(e) => {
+                          delete e.currentTarget.dataset.justDragged;
+                        }}
+                        className={`bg-white border border-gray-200 rounded-lg p-3 cursor-move hover:shadow-md transition-all duration-200 opacity-75 ${
+                          isDragOver ? 'ring-2 ring-blue-400' : ''
+                        }`}
+                      >
                       {/* Priority Bar */}
                       <div className={`h-1 ${priorityBarColor} rounded-t-lg -mx-3 -mt-3 mb-3`} />
                       
@@ -732,15 +928,19 @@ function Tasks() {
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    </div>
-                  );
-                })}
-                {completedTasks.length === 0 && (
-                  <p className="text-sm text-gray-500 text-center py-8">No completed tasks</p>
+                </div>
+                      {showBelowIndicator && (
+                        <div className="h-0.5 bg-blue-500 rounded-full mt-1 mx-2" />
                 )}
               </div>
-            </Card>
+                  );
+                })}
+            {completedTasks.length === 0 && (
+              <p className="text-sm text-gray-500 text-center py-8">No completed tasks</p>
+            )}
           </div>
+        </Card>
+      </div>
         </div>
       ) : (
         /* List View - Shows all statuses */
